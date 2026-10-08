@@ -33,6 +33,13 @@ function jyio_imagick_write(string $input, string $output, string $mime, array $
         $image->readImage($input);
         if ($image->getNumberImages() > 1) return false;
         $image->setIteratorIndex(0);
+        $preserveAlpha = in_array($mime, ['image/png', 'image/webp', 'image/avif'], true);
+        if ($preserveAlpha) {
+            $image->setImageBackgroundColor(new ImagickPixel('transparent'));
+            if (defined('Imagick::ALPHACHANNEL_ACTIVATE')) {
+                $image->setImageAlphaChannel(Imagick::ALPHACHANNEL_ACTIVATE);
+            }
+        }
         $orientationApplied = false;
         if ($config['auto_orient']) {
             $orientation = $image->getImageOrientation();
@@ -53,6 +60,9 @@ function jyio_imagick_write(string $input, string $output, string $mime, array $
         if ($config['strip_metadata']) {
             $image->stripImage();
             $image->setImagePage(0, 0, 0, 0);
+        }
+        if ($preserveAlpha && defined('Imagick::ALPHACHANNEL_ACTIVATE')) {
+            $image->setImageAlphaChannel(Imagick::ALPHACHANNEL_ACTIVATE);
         }
         $image->setImageFormat($format);
         if ($mime === 'image/png') {

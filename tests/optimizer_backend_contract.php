@@ -91,7 +91,13 @@ try {
             $alphaLoader = $alphaLoaders[$mime] ?? '';
             if ($alphaLoader !== '' && function_exists($alphaLoader)) {
                 $alphaImage = $alphaLoader($stage);
-                $alpha = ($alphaImage instanceof GdImage) ? ((imagecolorat($alphaImage, 0, 0) >> 24) & 0x7f) : 0;
+                $alpha = 0;
+                if ($alphaImage instanceof GdImage) {
+                    $pixel = imagecolorat($alphaImage, 0, 0);
+                    $alpha = imageistruecolor($alphaImage)
+                        ? (($pixel >> 24) & 0x7f)
+                        : (int)(imagecolorsforindex($alphaImage, $pixel)['alpha'] ?? 0);
+                }
                 if ($alphaImage instanceof GdImage) imagedestroy($alphaImage);
                 jyio_test_check($alpha > 0, "{$backend} preserves {$mime} alpha");
             }
