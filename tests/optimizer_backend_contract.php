@@ -89,7 +89,7 @@ try {
             $ratio = $info[1] > 0 ? $info[0] / $info[1] : 0.0;
             jyio_test_check($info[0] > 0 && $info[1] > 0 && $info[0] <= 320 && $info[1] <= 320
                 && $info[0] < 640 && $info[1] < 480 && abs($ratio - (4 / 3)) < 0.02,
-                "{$backend} applies bounded resize without distortion");
+                "{$backend} applies bounded resize without distortion ({$info[0]}x{$info[1]})");
             $alphaLoaders = ['image/png' => 'imagecreatefrompng', 'image/webp' => 'imagecreatefromwebp', 'image/avif' => 'imagecreatefromavif'];
             $alphaLoader = $alphaLoaders[$mime] ?? '';
             if ($alphaLoader !== '' && function_exists($alphaLoader)) {
