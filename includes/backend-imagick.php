@@ -13,11 +13,15 @@ function jyio_imagick_capabilities(): array
         try {
             if (Imagick::queryFormats($format) === []) continue;
             $probe = new Imagick();
-            $probe->newImage(1, 1, new ImagickPixel('transparent'), $format);
+            $probeColor = $mime === 'image/jpeg' ? '#265c96' : 'rgba(38,92,150,0.5)';
+            $probe->newImage(16, 12, new ImagickPixel($probeColor), $format);
+            $probe->resizeImage(8, 6, Imagick::FILTER_LANCZOS, 1.0, false);
             $probe->setImageFormat($mime === 'image/png' ? 'PNG32' : $format);
             $blob = $probe->getImagesBlob();
             $inspected = $blob !== '' ? @getimagesizefromstring($blob) : false;
-            $formats[$mime] = is_array($inspected) && ($inspected['mime'] ?? '') === $mime;
+            $formats[$mime] = is_array($inspected) && ($inspected['mime'] ?? '') === $mime
+                && (int)($inspected[0] ?? 0) > 0 && (int)($inspected[0] ?? 0) <= 8
+                && (int)($inspected[1] ?? 0) > 0 && (int)($inspected[1] ?? 0) <= 6;
             $probe->clear();
             $probe->destroy();
         } catch (Throwable) {
@@ -80,7 +84,8 @@ function jyio_imagick_write(string $input, string $output, string $mime, array $
         }
         if (!$image->writeImage($output)) throw new RuntimeException('The selected image backend could not encode the image.');
         $inspected = @getimagesize($output);
-        if (!is_array($inspected) || ($inspected['mime'] ?? '') !== $mime) {
+        if (!is_array($inspected) || ($inspected['mime'] ?? '') !== $mime
+            || (int)($inspected[0] ?? 0) < 1 || (int)($inspected[1] ?? 0) < 1) {
             throw new RuntimeException('The selected image backend produced an image Core cannot inspect.');
         }
         clearstatcache(true, $output);
