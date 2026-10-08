@@ -64,8 +64,9 @@ function jyio_imagick_write(string $input, string $output, string $mime, array $
         if ($preserveAlpha && defined('Imagick::ALPHACHANNEL_ACTIVATE')) {
             $image->setImageAlphaChannel(Imagick::ALPHACHANNEL_ACTIVATE);
         }
-        $image->setImageFormat($format);
+        $image->setImageFormat($mime === 'image/png' ? 'PNG32' : $format);
         if ($mime === 'image/png') {
+            $image->setOption('png:color-type', '6');
             $image->setOption('png:compression-level', (string)$config['png_compression']);
             $image->setImageCompressionQuality(max(1, 100 - ($config['png_compression'] * 10)));
         } else {
