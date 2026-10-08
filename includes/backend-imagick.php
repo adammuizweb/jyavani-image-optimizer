@@ -3,24 +3,28 @@ declare(strict_types=1);
 
 function jyio_imagick_capabilities(): array
 {
+    static $capabilities = null;
+    if (is_array($capabilities)) return $capabilities;
     $available = extension_loaded('imagick') && class_exists('Imagick');
     $mapping = ['image/jpeg' => 'JPEG', 'image/png' => 'PNG', 'image/webp' => 'WEBP', 'image/avif' => 'AVIF'];
     $formats = array_fill_keys(array_keys($mapping), false);
-    if (!$available) return ['available' => false, 'formats' => $formats];
+    if (!$available) return $capabilities = ['available' => false, 'formats' => $formats];
     foreach ($mapping as $mime => $format) {
         try {
             if (Imagick::queryFormats($format) === []) continue;
             $probe = new Imagick();
             $probe->newImage(1, 1, new ImagickPixel('transparent'), $format);
-            $probe->setImageFormat($format);
-            $formats[$mime] = $probe->getImagesBlob() !== '';
+            $probe->setImageFormat($mime === 'image/png' ? 'PNG32' : $format);
+            $blob = $probe->getImagesBlob();
+            $inspected = $blob !== '' ? @getimagesizefromstring($blob) : false;
+            $formats[$mime] = is_array($inspected) && ($inspected['mime'] ?? '') === $mime;
             $probe->clear();
             $probe->destroy();
         } catch (Throwable) {
             $formats[$mime] = false;
         }
     }
-    return ['available' => true, 'formats' => $formats];
+    return $capabilities = ['available' => true, 'formats' => $formats];
 }
 
 function jyio_imagick_write(string $input, string $output, string $mime, array $config): bool
@@ -75,6 +79,10 @@ function jyio_imagick_write(string $input, string $output, string $mime, array $
             $image->setImageCompressionQuality($quality);
         }
         if (!$image->writeImage($output)) throw new RuntimeException('The selected image backend could not encode the image.');
+        $inspected = @getimagesize($output);
+        if (!is_array($inspected) || ($inspected['mime'] ?? '') !== $mime) {
+            throw new RuntimeException('The selected image backend produced an image Core cannot inspect.');
+        }
         clearstatcache(true, $output);
         if ($config['only_if_smaller'] && !$resizedImage && !$orientationApplied
             && (int)@filesize($output) >= (int)@filesize($input)) return false;
