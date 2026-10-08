@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 function jyio_gd_capabilities(): array
 {
+    static $capabilities = null;
+    if (is_array($capabilities)) return $capabilities;
     $available = extension_loaded('gd') && function_exists('imagecreatetruecolor');
     $pairs = [
         'image/jpeg' => ['imagecreatefromjpeg', 'imagejpeg'],
@@ -12,9 +14,37 @@ function jyio_gd_capabilities(): array
     ];
     $formats = [];
     foreach ($pairs as $mime => [$decoder, $encoder]) {
-        $formats[$mime] = $available && function_exists($decoder) && function_exists($encoder);
+        $formats[$mime] = false;
+        if (!$available || !function_exists($decoder) || !function_exists($encoder)) continue;
+        $probe = imagecreatetruecolor(8, 6);
+        if (!$probe instanceof GdImage) continue;
+        if ($mime === 'image/jpeg') {
+            $color = imagecolorallocate($probe, 38, 92, 150);
+        } else {
+            imagealphablending($probe, false);
+            imagesavealpha($probe, true);
+            $color = imagecolorallocatealpha($probe, 38, 92, 150, 64);
+        }
+        imagefilledrectangle($probe, 0, 0, 7, 5, $color);
+        ob_start();
+        try {
+            $encoded = match ($mime) {
+                'image/jpeg' => @imagejpeg($probe, null, 82),
+                'image/png' => @imagepng($probe, null, 7),
+                'image/webp' => @imagewebp($probe, null, 82),
+                'image/avif' => @imageavif($probe, null, 50),
+                default => false,
+            };
+            $blob = ob_get_contents();
+        } finally {
+            ob_end_clean();
+            imagedestroy($probe);
+        }
+        $inspected = $encoded && is_string($blob) && $blob !== '' ? @getimagesizefromstring($blob) : false;
+        $formats[$mime] = is_array($inspected) && ($inspected['mime'] ?? '') === $mime
+            && (int)($inspected[0] ?? 0) === 8 && (int)($inspected[1] ?? 0) === 6;
     }
-    return ['available' => $available, 'formats' => $formats];
+    return $capabilities = ['available' => $available, 'formats' => $formats];
 }
 
 function jyio_webp_is_animated(string $path): bool
