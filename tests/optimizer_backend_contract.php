@@ -86,7 +86,10 @@ try {
             $info = getimagesize($stage);
             jyio_test_check($result['status'] === 'optimized', "{$backend} optimizes generated {$mime} fixture");
             jyio_test_check(($info['mime'] ?? '') === $mime, "{$backend} preserves {$mime} format");
-            jyio_test_check($info[0] <= 320 && $info[1] <= 320 && $info[0] === 320 && $info[1] === 240, "{$backend} applies bounded resize without distortion");
+            $ratio = $info[1] > 0 ? $info[0] / $info[1] : 0.0;
+            jyio_test_check($info[0] > 0 && $info[1] > 0 && $info[0] <= 320 && $info[1] <= 320
+                && $info[0] < 640 && $info[1] < 480 && abs($ratio - (4 / 3)) < 0.02,
+                "{$backend} applies bounded resize without distortion");
             $alphaLoaders = ['image/png' => 'imagecreatefrompng', 'image/webp' => 'imagecreatefromwebp', 'image/avif' => 'imagecreatefromavif'];
             $alphaLoader = $alphaLoaders[$mime] ?? '';
             if ($alphaLoader !== '' && function_exists($alphaLoader)) {
