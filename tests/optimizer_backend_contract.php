@@ -42,6 +42,8 @@ try {
             imagesavealpha($image, true);
             $transparent = imagecolorallocatealpha($image, 0, 0, 0, 127);
             imagefilledrectangle($image, 0, 0, 639, 479, $transparent);
+            $visible = imagecolorallocatealpha($image, 38, 92, 150, 64);
+            imagesetpixel($image, 320, 240, $visible);
             if (!$encoder($image, $path, 80)) { imagedestroy($image); continue; }
             imagedestroy($image);
             chmod($path, 0600);
