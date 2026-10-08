@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Jyavani Image Optimizer</title>
+  <desc id="desc">A framed landscape compressed by inward arrows</desc>
+  <rect width="256" height="256" rx="52" fill="#ef3f28"/>
+  <rect x="50" y="58" width="156" height="132" rx="18" fill="none" stroke="#fff" stroke-width="13"/>
+  <circle cx="91" cy="95" r="13" fill="#fff"/>
+  <path d="m64 165 39-42 30 29 19-20 40 40" fill="none" stroke="#fff" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M31 128h39m-14-15 15 15-15 15m169-15h-39m14-15-15 15 15 15" fill="none" stroke="#fff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,68 @@
+{
+  "name": "jyavani-image-optimizer",
+  "version": "0.1.0",
+  "title": "Jyavani Image Optimizer",
+  "description": "Conservatively resize and optimize supported images during upload.",
+  "author": "Adam Muiz",
+  "author_uri": "https://jyavani.com/member/adammuiz/",
+  "plugin_uri": "https://jyavani.com/plugin/jyavani-image-optimizer/",
+  "homepage": "https://github.com/adammuizweb/jyavani-image-optimizer",
+  "github_url": "https://github.com/adammuizweb/jyavani-image-optimizer",
+  "license": "MIT",
+  "icon": "icon.svg",
+  "store": {
+    "url": "https://jyavani.com/plugin-store",
+    "slug": "jyavani-image-optimizer"
+  },
+  "requires": {
+    "jyavani": ">=2.3.175",
+    "php": ">=8.1",
+    "extensions": ["json", "mbstring", "pdo"],
+    "plugins": {}
+  },
+  "permissions": [
+    {
+      "key": "plugin.jyavani-image-optimizer.settings.manage",
+      "label": "Manage Image Optimizer Settings",
+      "supports_scope": false,
+      "default_roles": ["admin"],
+      "delegable": false
+    }
+  ],
+  "admin": {
+    "pages": [
+      {
+        "route": "admin/settings/jyavani-image-optimizer",
+        "file": "admin/settings.php",
+        "title": "Image Optimizer",
+        "roles": ["admin"],
+        "permission": "plugin.jyavani-image-optimizer.settings.manage"
+      },
+      {
+        "route": "admin/settings/jyavani-image-optimizer/save",
+        "file": "admin/save.php",
+        "title": "Save Image Optimizer Settings",
+        "roles": ["admin"],
+        "permission": "plugin.jyavani-image-optimizer.settings.manage",
+        "hidden": true
+      }
+    ],
+    "nav": [
+      {
+        "label": "Image Optimizer",
+        "page": "admin/settings/jyavani-image-optimizer",
+        "parent": "settings",
+        "icon": "image-down",
+        "icon_asset": "static/plugins/jyavani-image-optimizer/icon-sidebar.svg",
+        "roles": ["admin"]
+      }
+    ]
+  },
+  "static": {
+    "copy": [
+      {"from": "assets/icon-sidebar.svg", "to": "static/plugins/jyavani-image-optimizer/icon-sidebar.svg"},
+      {"from": "assets/css/admin.css", "to": "static/plugins/jyavani-image-optimizer/admin.css"}
+    ]
+  },
+  "assets": {"css": [], "js": []}
+}
