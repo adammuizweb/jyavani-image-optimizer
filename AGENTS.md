@@ -5,9 +5,10 @@ Jyavani Image Optimizer is a public MIT-licensed upload-time image processor for
 - Require Jyavani Core 2.3.175 or newer and PHP 8.1 or newer.
 - Never modify Jyavani Core from this repository.
 - Process only Core's private upload stage through `media_upload_atomic_rewrite()`.
-- Preserve the input MIME format and let Core perform final validation.
+- Preserve non-PNG input formats. Convert PNG only when the configured output mode requests JPEG, WebP, or AVIF, then let Core establish the final MIME and extension.
+- Preserve PNG alpha in WebP and AVIF; flatten PNG alpha to white in JPEG.
 - Never add batch replacement, existing-media mutation, or original retention.
-- Keep Imagick and GD optional; every format requires both decode and encode capability.
+- Keep Imagick and GD optional; processing requires source decode and target encode capability.
 - Never log paths, filenames, raw image data, EXIF values, or private metadata.
 - Store configuration only in `jyavani_image_optimizer_config`; no migration is allowed.
 - Keep all identifiers under the `jyio_` prefix except manifest-owned permission and setting keys.

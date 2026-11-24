@@ -6,16 +6,18 @@ function jyio_gd_capabilities(): array
     static $capabilities = null;
     if (is_array($capabilities)) return $capabilities;
     $available = extension_loaded('gd') && function_exists('imagecreatetruecolor');
-    $pairs = [
+    $functions = [
         'image/jpeg' => ['imagecreatefromjpeg', 'imagejpeg'],
         'image/png' => ['imagecreatefrompng', 'imagepng'],
         'image/webp' => ['imagecreatefromwebp', 'imagewebp'],
         'image/avif' => ['imagecreatefromavif', 'imageavif'],
     ];
-    $formats = [];
-    foreach ($pairs as $mime => [$decoder, $encoder]) {
-        $formats[$mime] = false;
-        if (!$available || !function_exists($decoder) || !function_exists($encoder)) continue;
+    $decode = [];
+    $encode = [];
+    foreach ($functions as $mime => [$decoder, $encoder]) {
+        $decode[$mime] = $available && function_exists($decoder);
+        $encode[$mime] = false;
+        if (!$available || !function_exists($encoder)) continue;
         $probe = imagecreatetruecolor(8, 6);
         if (!$probe instanceof GdImage) continue;
         if ($mime === 'image/jpeg') {
@@ -41,17 +43,33 @@ function jyio_gd_capabilities(): array
             imagedestroy($probe);
         }
         $inspected = $encoded && is_string($blob) && $blob !== '' ? @getimagesizefromstring($blob) : false;
-        $formats[$mime] = is_array($inspected) && ($inspected['mime'] ?? '') === $mime
+        $encode[$mime] = is_array($inspected) && ($inspected['mime'] ?? '') === $mime
             && (int)($inspected[0] ?? 0) === 8 && (int)($inspected[1] ?? 0) === 6;
     }
-    return $capabilities = ['available' => $available, 'formats' => $formats];
+    return $capabilities = ['available' => $available, 'decode' => $decode, 'encode' => $encode];
 }
 
 function jyio_webp_is_animated(string $path): bool
 {
-    $bytes = @file_get_contents($path);
-    if (!is_string($bytes) || strlen($bytes) < 16) return false;
-    return strpos($bytes, 'ANIM') !== false || strpos($bytes, 'ANMF') !== false;
+    $handle = @fopen($path, 'rb');
+    if (!is_resource($handle)) return false;
+    try {
+        $header = fread($handle, 12);
+        if (!is_string($header) || strlen($header) !== 12
+            || substr($header, 0, 4) !== 'RIFF' || substr($header, 8, 4) !== 'WEBP') return false;
+        while (!feof($handle)) {
+            $chunk = fread($handle, 8);
+            if (!is_string($chunk) || strlen($chunk) !== 8) return false;
+            $type = substr($chunk, 0, 4);
+            $length = unpack('Vlength', substr($chunk, 4, 4))['length'] ?? -1;
+            if ($type === 'ANIM' || $type === 'ANMF') return true;
+            if (!is_int($length) || $length < 0 || $length > 0x7fffffff
+                || fseek($handle, $length + ($length % 2), SEEK_CUR) !== 0) return false;
+        }
+        return false;
+    } finally {
+        fclose($handle);
+    }
 }
 
 function jyio_gd_memory_limit_bytes(): ?int
@@ -105,9 +123,8 @@ function jyio_gd_rotate(GdImage $image, int $angle): GdImage
     return $rotated;
 }
 
-function jyio_gd_write(string $input, string $output, string $mime, array $config): bool
+function jyio_gd_write(string $input, string $output, string $sourceMime, string $targetMime, array $config): bool
 {
-    if ($mime === 'image/webp' && jyio_webp_is_animated($input)) return false;
     jyio_gd_assert_memory_safe($input, $config);
     $loaders = [
         'image/jpeg' => 'imagecreatefromjpeg',
@@ -115,13 +132,13 @@ function jyio_gd_write(string $input, string $output, string $mime, array $confi
         'image/webp' => 'imagecreatefromwebp',
         'image/avif' => 'imagecreatefromavif',
     ];
-    $loader = $loaders[$mime] ?? '';
+    $loader = $loaders[$sourceMime] ?? '';
     if ($loader === '' || !function_exists($loader)) throw new RuntimeException('The selected image backend cannot decode this format.');
     $image = @$loader($input);
     if (!$image instanceof GdImage) throw new RuntimeException('The selected image backend could not decode the image.');
     try {
         $orientationApplied = false;
-        if ($mime === 'image/jpeg' && $config['auto_orient'] && function_exists('exif_read_data')) {
+        if ($sourceMime === 'image/jpeg' && $config['auto_orient'] && function_exists('exif_read_data')) {
             $exif = @exif_read_data($input, 'IFD0', true, false);
             $orientation = is_array($exif) ? (int)($exif['IFD0']['Orientation'] ?? $exif['Orientation'] ?? 1) : 1;
             if ($orientation >= 2 && $orientation <= 8) {
@@ -139,11 +156,14 @@ function jyio_gd_write(string $input, string $output, string $mime, array $confi
         if ($resizedImage) {
             $resized = imagecreatetruecolor($targetWidth, $targetHeight);
             if (!$resized instanceof GdImage) throw new RuntimeException('The selected image backend could not allocate the resized image.');
-            if ($mime !== 'image/jpeg') {
+            if ($targetMime !== 'image/jpeg') {
                 imagealphablending($resized, false);
                 imagesavealpha($resized, true);
                 $transparent = imagecolorallocatealpha($resized, 0, 0, 0, 127);
                 imagefilledrectangle($resized, 0, 0, $targetWidth, $targetHeight, $transparent);
+            } elseif ($sourceMime !== 'image/jpeg') {
+                $white = imagecolorallocate($resized, 255, 255, 255);
+                imagefilledrectangle($resized, 0, 0, $targetWidth - 1, $targetHeight - 1, $white);
             }
             if (!imagecopyresampled($resized, $image, 0, 0, 0, 0, $targetWidth, $targetHeight, $width, $height)) {
                 imagedestroy($resized);
@@ -152,8 +172,23 @@ function jyio_gd_write(string $input, string $output, string $mime, array $confi
             imagedestroy($image);
             $image = $resized;
         }
-        if ($mime !== 'image/jpeg') { imagealphablending($image, false); imagesavealpha($image, true); }
-        $written = match ($mime) {
+        if ($targetMime === 'image/jpeg' && $sourceMime !== 'image/jpeg') {
+            $flattened = imagecreatetruecolor(imagesx($image), imagesy($image));
+            if (!$flattened instanceof GdImage) throw new RuntimeException('The selected image backend could not flatten the image.');
+            $white = imagecolorallocate($flattened, 255, 255, 255);
+            imagefilledrectangle($flattened, 0, 0, imagesx($image) - 1, imagesy($image) - 1, $white);
+            imagealphablending($flattened, true);
+            if (!imagecopy($flattened, $image, 0, 0, 0, 0, imagesx($image), imagesy($image))) {
+                imagedestroy($flattened);
+                throw new RuntimeException('The selected image backend could not flatten the image.');
+            }
+            imagedestroy($image);
+            $image = $flattened;
+        } elseif ($targetMime !== 'image/jpeg') {
+            imagealphablending($image, false);
+            imagesavealpha($image, true);
+        }
+        $written = match ($targetMime) {
             'image/jpeg' => imagejpeg($image, $output, $config['jpeg_quality']),
             'image/png' => imagepng($image, $output, $config['png_compression']),
             'image/webp' => imagewebp($image, $output, $config['webp_quality']),
@@ -161,6 +196,10 @@ function jyio_gd_write(string $input, string $output, string $mime, array $confi
             default => false,
         };
         if (!$written) throw new RuntimeException('The selected image backend could not encode the image.');
+        $outputInfo = @getimagesize($output);
+        if (!is_array($outputInfo) || ($outputInfo['mime'] ?? '') !== $targetMime) {
+            throw new RuntimeException('The selected image backend produced an image Core cannot inspect.');
+        }
         clearstatcache(true, $output);
         if ($config['only_if_smaller'] && !$resizedImage && !$orientationApplied
             && (int)@filesize($output) >= (int)@filesize($input)) return false;

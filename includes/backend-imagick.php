@@ -7,11 +7,13 @@ function jyio_imagick_capabilities(): array
     if (is_array($capabilities)) return $capabilities;
     $available = extension_loaded('imagick') && class_exists('Imagick');
     $mapping = ['image/jpeg' => 'JPEG', 'image/png' => 'PNG', 'image/webp' => 'WEBP', 'image/avif' => 'AVIF'];
-    $formats = array_fill_keys(array_keys($mapping), false);
-    if (!$available) return $capabilities = ['available' => false, 'formats' => $formats];
+    $decode = array_fill_keys(array_keys($mapping), false);
+    $encode = array_fill_keys(array_keys($mapping), false);
+    if (!$available) return $capabilities = ['available' => false, 'decode' => $decode, 'encode' => $encode];
     foreach ($mapping as $mime => $format) {
         try {
             if (Imagick::queryFormats($format) === []) continue;
+            $decode[$mime] = true;
             $probe = new Imagick();
             $probeColor = $mime === 'image/jpeg' ? '#265c96' : 'rgba(38,92,150,0.5)';
             $probe->newImage(16, 12, new ImagickPixel($probeColor), $format);
@@ -19,29 +21,29 @@ function jyio_imagick_capabilities(): array
             $probe->setImageFormat($mime === 'image/png' ? 'PNG32' : $format);
             $blob = $probe->getImagesBlob();
             $inspected = $blob !== '' ? @getimagesizefromstring($blob) : false;
-            $formats[$mime] = is_array($inspected) && ($inspected['mime'] ?? '') === $mime
+            $encode[$mime] = is_array($inspected) && ($inspected['mime'] ?? '') === $mime
                 && (int)($inspected[0] ?? 0) > 0 && (int)($inspected[0] ?? 0) <= 8
                 && (int)($inspected[1] ?? 0) > 0 && (int)($inspected[1] ?? 0) <= 6;
             $probe->clear();
             $probe->destroy();
         } catch (Throwable) {
-            $formats[$mime] = false;
+            $encode[$mime] = false;
         }
     }
-    return $capabilities = ['available' => true, 'formats' => $formats];
+    return $capabilities = ['available' => true, 'decode' => $decode, 'encode' => $encode];
 }
 
-function jyio_imagick_write(string $input, string $output, string $mime, array $config): bool
+function jyio_imagick_write(string $input, string $output, string $sourceMime, string $targetMime, array $config): bool
 {
     $formats = ['image/jpeg' => 'JPEG', 'image/png' => 'PNG', 'image/webp' => 'WEBP', 'image/avif' => 'AVIF'];
-    $format = $formats[$mime] ?? '';
+    $format = $formats[$targetMime] ?? '';
     if ($format === '') throw new RuntimeException('The selected image backend cannot decode this format.');
     $image = new Imagick();
     try {
         $image->readImage($input);
         if ($image->getNumberImages() > 1) return false;
         $image->setIteratorIndex(0);
-        $preserveAlpha = in_array($mime, ['image/png', 'image/webp', 'image/avif'], true);
+        $preserveAlpha = in_array($targetMime, ['image/png', 'image/webp', 'image/avif'], true);
         if ($preserveAlpha) {
             $image->setImageBackgroundColor(new ImagickPixel('transparent'));
             if (defined('Imagick::ALPHACHANNEL_ACTIVATE')) {
@@ -69,22 +71,26 @@ function jyio_imagick_write(string $input, string $output, string $mime, array $
             $image->stripImage();
             $image->setImagePage(0, 0, 0, 0);
         }
+        if ($targetMime === 'image/jpeg') {
+            $image->setImageBackgroundColor(new ImagickPixel('white'));
+            if (defined('Imagick::ALPHACHANNEL_REMOVE')) $image->setImageAlphaChannel(Imagick::ALPHACHANNEL_REMOVE);
+        }
         if ($preserveAlpha && defined('Imagick::ALPHACHANNEL_ACTIVATE')) {
             $image->setImageAlphaChannel(Imagick::ALPHACHANNEL_ACTIVATE);
         }
-        $image->setImageFormat($mime === 'image/png' ? 'PNG32' : $format);
-        if ($mime === 'image/png') {
+        $image->setImageFormat($targetMime === 'image/png' ? 'PNG32' : $format);
+        if ($targetMime === 'image/png') {
             $image->setOption('png:color-type', '6');
             $image->setOption('png:compression-level', (string)$config['png_compression']);
             $image->setImageCompressionQuality(max(1, 100 - ($config['png_compression'] * 10)));
         } else {
-            $quality = $mime === 'image/jpeg' ? $config['jpeg_quality']
-                : ($mime === 'image/webp' ? $config['webp_quality'] : $config['avif_quality']);
+            $quality = $targetMime === 'image/jpeg' ? $config['jpeg_quality']
+                : ($targetMime === 'image/webp' ? $config['webp_quality'] : $config['avif_quality']);
             $image->setImageCompressionQuality($quality);
         }
         if (!$image->writeImage($output)) throw new RuntimeException('The selected image backend could not encode the image.');
         $inspected = @getimagesize($output);
-        if (!is_array($inspected) || ($inspected['mime'] ?? '') !== $mime
+        if (!is_array($inspected) || ($inspected['mime'] ?? '') !== $targetMime
             || (int)($inspected[0] ?? 0) < 1 || (int)($inspected[1] ?? 0) < 1) {
             throw new RuntimeException('The selected image backend produced an image Core cannot inspect.');
         }

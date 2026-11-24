@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0 - 2026-11-24
+
+- Add administrator-selectable PNG output modes: preserve, JPEG, WebP, and AVIF.
+- Preserve transparency for WebP and AVIF output and flatten JPEG transparency to white.
+- Select backends by source decode and target encode capability using the staged file's actual MIME.
+- Retry a capable GD backend when Imagick fails at runtime in automatic mode.
+- Skip APNG, animated WebP, and AVIF sequences safely, and validate converted output before Core's final inspection.
+- Expand conversion contracts and run the standalone manifest contract in CI.
+
 ## 0.1.0 - 2026-10-08
 
 - Add upload-time optimization with Imagick and GD backends.

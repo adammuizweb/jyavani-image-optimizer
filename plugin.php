@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 if (!defined('PLUGIN_SYSTEM_LOADED')) return;
 
-const JYIO_VERSION = '0.1.0';
+const JYIO_VERSION = '0.2.0';
 const JYIO_PLUGIN_NAME = 'jyavani-image-optimizer';
 const JYIO_SETTING_KEY = 'jyavani_image_optimizer_config';
 const JYIO_PERMISSION = 'plugin.jyavani-image-optimizer.settings.manage';

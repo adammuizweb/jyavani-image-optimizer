@@ -18,11 +18,13 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: gd, mbstring, pdo, zip
+          extensions: gd, imagick, mbstring, pdo, zip
           coverage: none
       - name: Lint PHP
         run: find . -type f -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Run contracts
-        run: for test in tests/*_contract.php; do php "$test"; done
+        run: |
+          for test in tests/*_contract.php; do php "$test"; done
+          php tests/contract.php
       - name: Build package
-        run: php tools/build-package.php "$RUNNER_TEMP/jyavani-image-optimizer-0.1.0.zip"
+        run: php tools/build-package.php "$RUNNER_TEMP/jyavani-image-optimizer-0.2.0.zip"

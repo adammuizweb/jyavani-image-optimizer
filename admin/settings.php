@@ -58,6 +58,18 @@ $formatLabels = [
             <option value="gd"<?= $config['backend'] === 'gd' ? ' selected' : '' ?>>GD</option>
           </select>
         </label>
+        <label>
+          <span><?= jyio_h(jyio_t('PNG output mode')) ?></span>
+          <span>
+            <select name="png_output">
+              <option value="preserve"<?= $config['png_output'] === 'preserve' ? ' selected' : '' ?>><?= jyio_h(jyio_t('Preserve PNG')) ?></option>
+              <option value="jpeg"<?= $config['png_output'] === 'jpeg' ? ' selected' : '' ?>>JPEG</option>
+              <option value="webp"<?= $config['png_output'] === 'webp' ? ' selected' : '' ?>>WebP</option>
+              <option value="avif"<?= $config['png_output'] === 'avif' ? ' selected' : '' ?>>AVIF</option>
+            </select>
+            <small class="jyio-warning"><?= jyio_h(jyio_t('JPEG converts transparent pixels to white.')) ?></small>
+          </span>
+        </label>
       </fieldset>
 
       <fieldset class="jyio-card">
@@ -109,14 +121,17 @@ $formatLabels = [
         <?php foreach (['imagick' => 'Imagick', 'gd' => 'GD'] as $backend => $label): ?>
           <section class="jyio-backend">
             <h3><?= jyio_h($label) ?><span class="<?= $capabilities[$backend]['available'] ? 'is-ready' : '' ?>"><?= jyio_h($capabilities[$backend]['available'] ? jyio_t('Available') : jyio_t('Unavailable')) ?></span></h3>
-            <ul>
-              <?php foreach ($formatLabels as $mime => $format): ?>
-                <li class="<?= $capabilities[$backend]['formats'][$mime] ? 'is-ready' : '' ?>"><span aria-hidden="true"></span><?= jyio_h($format) ?></li>
-              <?php endforeach; ?>
-            </ul>
+            <?php foreach (['decode' => jyio_t('Decode'), 'encode' => jyio_t('Encode')] as $operation => $operationLabel): ?>
+              <h4><?= jyio_h($operationLabel) ?></h4>
+              <ul>
+                <?php foreach ($formatLabels as $mime => $format): ?>
+                  <li class="<?= $capabilities[$backend][$operation][$mime] ? 'is-ready' : '' ?>"><span aria-hidden="true"></span><?= jyio_h($format) ?></li>
+                <?php endforeach; ?>
+              </ul>
+            <?php endforeach; ?>
           </section>
         <?php endforeach; ?>
-        <p class="jyio-note"><?= jyio_h(jyio_t('A format is used only when the selected backend can decode and encode it. Animated images are left unchanged.')) ?></p>
+        <p class="jyio-note"><?= jyio_h(jyio_t('A source and output pair is used only when the selected backend can decode the source and encode the output. Animated images are left unchanged.')) ?></p>
       </div>
     </aside>
   </div>

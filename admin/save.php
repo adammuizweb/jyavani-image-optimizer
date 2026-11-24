@@ -24,6 +24,7 @@ if (!function_exists('csrf_check') || !csrf_check($token)) {
 $submitted = [
     'enabled' => isset($_POST['enabled']) ? '1' : '0',
     'backend' => $_POST['backend'] ?? null,
+    'png_output' => $_POST['png_output'] ?? null,
     'max_width' => $_POST['max_width'] ?? null,
     'max_height' => $_POST['max_height'] ?? null,
     'jpeg_quality' => $_POST['jpeg_quality'] ?? null,
@@ -49,6 +50,7 @@ try {
     $summary = [
         'enabled' => $config['enabled'],
         'backend' => $config['backend'],
+        'png_output' => $config['png_output'],
         'maximum' => $config['max_width'] . 'x' . $config['max_height'],
         'qualities' => [$config['jpeg_quality'], $config['webp_quality'], $config['avif_quality'], $config['png_compression']],
         'policy' => $config['failure_policy'],

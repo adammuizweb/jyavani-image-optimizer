@@ -6,6 +6,7 @@ function jyio_default_config(): array
     return [
         'enabled' => true,
         'backend' => 'auto',
+        'png_output' => 'preserve',
         'max_width' => 2560,
         'max_height' => 2560,
         'jpeg_quality' => 82,
@@ -44,10 +45,12 @@ function jyio_normalize_config(mixed $input): array
     $defaults = jyio_default_config();
     if (!is_array($input) || array_is_list($input)) return $defaults;
     $backend = is_string($input['backend'] ?? null) ? strtolower(trim($input['backend'])) : '';
+    $pngOutput = is_string($input['png_output'] ?? null) ? strtolower(trim($input['png_output'])) : '';
     $failure = is_string($input['failure_policy'] ?? null) ? strtolower(trim($input['failure_policy'])) : '';
     return [
         'enabled' => jyio_bool($input['enabled'] ?? null, $defaults['enabled']),
         'backend' => in_array($backend, ['auto', 'imagick', 'gd'], true) ? $backend : $defaults['backend'],
+        'png_output' => in_array($pngOutput, ['preserve', 'jpeg', 'webp', 'avif'], true) ? $pngOutput : $defaults['png_output'],
         'max_width' => jyio_int($input['max_width'] ?? null, $defaults['max_width'], 320, 10000),
         'max_height' => jyio_int($input['max_height'] ?? null, $defaults['max_height'], 320, 10000),
         'jpeg_quality' => jyio_int($input['jpeg_quality'] ?? null, $defaults['jpeg_quality'], 1, 100),

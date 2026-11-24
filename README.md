@@ -9,19 +9,21 @@ Jyavani Image Optimizer optimizes supported images in Jyavani Core's private upl
 - PHP extensions `json`, `mbstring`, and `pdo`
 - At least one optional processing backend: Imagick or GD
 
-Imagick and GD are intentionally optional package requirements. The plugin detects decode and encode support separately for JPEG, PNG, WebP, and AVIF. Automatic selection prefers Imagick for a format and then tries GD.
+Imagick and GD are intentionally optional package requirements. The plugin detects source decode and target encode support separately for JPEG, PNG, WebP, and AVIF. Automatic selection prefers Imagick for a supported source/target pair and retries with GD if Imagick fails at runtime.
 
 ## Behavior
 
 - Enabled by default when the plugin is active, even before settings are saved.
-- Preserves the input format.
+- Preserves JPEG, WebP, and AVIF input formats.
+- Preserves PNG by default; administrators can instead output JPEG, WebP, or AVIF.
+- Preserves PNG transparency in WebP and AVIF. JPEG conversion flattens transparency to white.
 - Defaults to a 2560 by 2560 maximum without upscaling.
 - Applies JPEG EXIF orientation when the backend supports it.
 - Preserves alpha for PNG, WebP, and AVIF.
 - Strips metadata by re-encoding.
 - Keeps the original stage when an encoded result is not smaller.
 - Always applies required dimension or orientation changes even when that output is larger.
-- Leaves animated WebP and multi-frame Imagick images unchanged.
+- Leaves APNG, animated WebP, AVIF sequences, and multi-frame Imagick images unchanged.
 - Lets uploaders opt out per image on both Core media upload surfaces.
 - Uses Core's atomic rewrite helper, after which Core revalidates the image.
 
@@ -31,7 +33,7 @@ GD necessarily removes embedded metadata whenever it re-encodes an image. Imagic
 
 ## Settings
 
-Open **Settings > Image Optimizer**. The permission `plugin.jyavani-image-optimizer.settings.manage` is nondelegable and granted to the system admin role by default. Configuration is stored as one autoloaded JSON value under `jyavani_image_optimizer_config`.
+Open **Settings > Image Optimizer**. The permission `plugin.jyavani-image-optimizer.settings.manage` is nondelegable and granted to the system admin role by default. Configuration is stored as one autoloaded JSON value under `jyavani_image_optimizer_config`. Existing configurations default to `preserve` for PNG output, so upgrading does not enable conversion.
 
 A keep-data uninstall leaves that setting in place. A complete uninstall deletes only that setting.
 
@@ -46,7 +48,8 @@ Run all checks:
 ```sh
 for file in $(find . -name '*.php' -type f); do php -l "$file"; done
 for test in tests/*_contract.php; do php "$test"; done
-php tools/build-package.php /tmp/opencode/jyavani-image-optimizer-0.1.0.zip
+php tests/contract.php
+php tools/build-package.php /tmp/opencode/jyavani-image-optimizer-0.2.0.zip
 ```
 
 The package builder uses an explicit allowlist and creates a flat plugin ZIP, with `plugin.json` at its root.

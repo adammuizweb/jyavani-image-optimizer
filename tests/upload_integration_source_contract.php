@@ -9,6 +9,8 @@ $optimizer = (string)file_get_contents($root . '/includes/optimizer.php');
 jyio_test_check(str_contains($plugin, "add_action('media_upload_preprocess'") && str_contains($plugin, "add_action('media_admin_upload_fields'"), 'entrypoint registers preprocessing and upload-field hooks');
 jyio_test_check(str_contains($plugin, "class_exists('MediaUploadRejected')") && str_contains($plugin, "function_exists('media_upload_atomic_rewrite')"), 'entrypoint fails clearly when the Core contract is absent');
 jyio_test_check(str_contains($optimizer, 'media_upload_atomic_rewrite('), 'all optimizer replacement uses the Core atomic rewrite helper');
+jyio_test_check(str_contains($optimizer, 'getimagesize($stagePath)') && !str_contains($optimizer, '$descriptor[\'mime\']'), 'optimizer inspects current staged bytes instead of trusting descriptor MIME');
+jyio_test_check(str_contains($optimizer, '($outputInfo[\'mime\'] ?? \'\') !== $targetMime'), 'optimizer validates intended output MIME before atomic replacement');
 jyio_test_check(str_contains($integration, 'media_extension[jyavani-image-optimizer][optimize]') && str_contains($integration, 'type="hidden"') && str_contains($integration, 'type="checkbox"'), 'bounded upload field supports an explicit unchecked value');
 jyio_test_check(substr_count($integration, 'media_extension[jyavani-image-optimizer][optimize]') === 2, 'upload field uses one hidden value and one checkbox value');
 jyio_test_check(str_contains($integration, "['optimize'] ?? '1'"), 'non-UI uploads inherit the globally enabled default');
