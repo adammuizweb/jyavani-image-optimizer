@@ -120,6 +120,45 @@ try {
             }
         }
     }
+    if (function_exists('imagecreatetruecolor') && function_exists('imagewebp') && function_exists('imagecreatefromwebp')) {
+        $opaqueWebp = $temp . '/opaque.webp';
+        $opaque = imagecreatetruecolor(640, 480);
+        for ($y = 0; $y < 480; $y += 40) {
+            for ($x = 0; $x < 640; $x += 40) {
+                $color = imagecolorallocate($opaque, ($x + $y) % 256, ($x * 2 + $y) % 256, ($x + $y * 2) % 256);
+                imagefilledrectangle($opaque, $x, $y, min(639, $x + 39), min(479, $y + 39), $color);
+            }
+        }
+        imagewebp($opaque, $opaqueWebp, 90);
+        imagedestroy($opaque);
+        chmod($opaqueWebp, 0600);
+        foreach (['imagick', 'gd'] as $backend) {
+            if (!($capabilities[$backend]['decode']['image/webp'] ?? false)
+                || !($capabilities[$backend]['encode']['image/webp'] ?? false)) continue;
+            $stage = $temp . '/opaque-webp-' . $backend;
+            copy($opaqueWebp, $stage);
+            chmod($stage, 0600);
+            $config = jyio_default_config();
+            $config['backend'] = $backend;
+            $config['max_width'] = 320;
+            $config['max_height'] = 320;
+            $config['only_if_smaller'] = false;
+            $result = jyio_optimize_stage($stage, ['mime' => 'image/webp'], $config);
+            $converted = imagecreatefromwebp($stage);
+            $maximumAlpha = 0;
+            if ($converted instanceof GdImage) {
+                for ($y = 0; $y < imagesy($converted); $y += 16) {
+                    for ($x = 0; $x < imagesx($converted); $x += 16) {
+                        $pixel = imagecolorat($converted, $x, $y);
+                        $maximumAlpha = max($maximumAlpha, ($pixel >> 24) & 0x7f);
+                    }
+                }
+                imagedestroy($converted);
+            }
+            jyio_test_check($result['status'] === 'optimized' && $maximumAlpha === 0,
+                "{$backend} keeps opaque WebP opaque during WebP recompression");
+        }
+    }
     if (isset($fixtures['image/jpeg']) && function_exists('imagecreatetruecolor') && function_exists('imagejpeg')) {
         $stage = $temp . '/no-upscale.jpg';
         $small = imagecreatetruecolor(100, 80);

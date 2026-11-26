@@ -49,7 +49,7 @@ Run all checks:
 for file in $(find . -name '*.php' -type f); do php -l "$file"; done
 for test in tests/*_contract.php; do php "$test"; done
 php tests/contract.php
-php tools/build-package.php /tmp/opencode/jyavani-image-optimizer-0.2.0.zip
+php tools/build-package.php /tmp/opencode/jyavani-image-optimizer-0.2.1.zip
 ```
 
 The package builder uses an explicit allowlist and creates a flat plugin ZIP, with `plugin.json` at its root.

@@ -43,7 +43,8 @@ function jyio_imagick_write(string $input, string $output, string $sourceMime, s
         $image->readImage($input);
         if ($image->getNumberImages() > 1) return false;
         $image->setIteratorIndex(0);
-        $preserveAlpha = in_array($targetMime, ['image/png', 'image/webp', 'image/avif'], true);
+        $preserveAlpha = in_array($targetMime, ['image/png', 'image/webp', 'image/avif'], true)
+            && $image->getImageAlphaChannel();
         if ($preserveAlpha) {
             $image->setImageBackgroundColor(new ImagickPixel('transparent'));
             if (defined('Imagick::ALPHACHANNEL_ACTIVATE')) {

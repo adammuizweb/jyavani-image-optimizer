@@ -27,4 +27,4 @@ jobs:
           for test in tests/*_contract.php; do php "$test"; done
           php tests/contract.php
       - name: Build package
-        run: php tools/build-package.php "$RUNNER_TEMP/jyavani-image-optimizer-0.2.0.zip"
+        run: php tools/build-package.php "$RUNNER_TEMP/jyavani-image-optimizer-0.2.1.zip"

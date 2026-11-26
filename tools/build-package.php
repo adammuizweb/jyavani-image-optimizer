@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__);
-$output = $argv[1] ?? '/tmp/opencode/jyavani-image-optimizer-0.2.0.zip';
+$output = $argv[1] ?? '/tmp/opencode/jyavani-image-optimizer-0.2.1.zip';
 $manifest = json_decode((string)file_get_contents($root . '/plugin.json'), true, 32, JSON_THROW_ON_ERROR);
 $name = (string)($manifest['name'] ?? '');
 $version = (string)($manifest['version'] ?? '');

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1 - 2026-11-26
+
+- Keep opaque WebP and AVIF sources opaque when Imagick recompresses them.
+- Add regression coverage for WebP-to-WebP alpha corruption.
+
 ## 0.2.0 - 2026-11-24
 
 - Add administrator-selectable PNG output modes: preserve, JPEG, WebP, and AVIF.

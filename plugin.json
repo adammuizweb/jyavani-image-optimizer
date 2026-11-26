@@ -1,6 +1,6 @@
 {
   "name": "jyavani-image-optimizer",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "title": "Jyavani Image Optimizer",
   "description": "Resize and optimize uploads with optional PNG conversion to JPEG, WebP, or AVIF.",
   "author": "Adam Muiz",
